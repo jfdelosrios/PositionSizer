@@ -665,12 +665,7 @@ void OnTick()
     
     ExtDialog.RefreshValues();
 
-    if (sets.TrailingStopPoints > 0)
-    {
-
-        DoTrailingStop();
-    
-    }
+    if (sets.TrailingStopPoints > 0) DoTrailingStop();
     
     if(_LastError != 0)
       {
