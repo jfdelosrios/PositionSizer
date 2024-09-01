@@ -992,7 +992,20 @@ void OnChartEvent(const int id,
         }
 
         if (sparam == ObjectPrefix + "StopLossLine") StopLossLineIsBeingMoved = false; // In any case ending moving state for the stop-loss line.
-        if (StringFind(sparam, ObjectPrefix + "TakeProfitLine") != -1) ArrayInitialize(TakeProfitLineIsBeingMoved, false); // In any case ending moving state for the take-profit line.
+        
+        if (StringFind(sparam, ObjectPrefix + "TakeProfitLine") != -1) 
+        {
+            ArrayInitialize(TakeProfitLineIsBeingMoved, false); // In any case ending moving state for the take-profit line.  
+        }
+        else
+        {
+            
+            if(_LastError == ERR_STRING_SMALL_LEN)
+            {
+                ResetLastError();
+            }
+
+        }
 
         if (id != CHARTEVENT_CHART_CHANGE) ExtDialog.RefreshValues();
 
