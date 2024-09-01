@@ -244,7 +244,7 @@ int OnInit()
     }
 
     bool is_InitControlsValues_required = false;
-    // Normal attempt to load settings fails (attempted in not chart change case and in chart case with 'each pair own settings' case
+    // Normal attempt to load settings fails (attempted in not chart change case and in chart case with 'each pair own settings' case)
     if ((((DeinitializationReason != REASON_CHARTCHANGE) || ((DeinitializationReason == REASON_CHARTCHANGE) && (OldSymbol != _Symbol) && (SymbolChange == SYMBOL_CHART_CHANGE_EACH_OWN))) && (!ExtDialog.LoadSettingsFromDisk())) 
     // OR chart change with hard_reset configured and with symbol change.
       || ((DeinitializationReason == REASON_CHARTCHANGE) && (SymbolChange == SYMBOL_CHART_CHANGE_HARD_RESET) && (OldSymbol != _Symbol)))
@@ -640,9 +640,13 @@ void OnDeinit(const int reason)
     
     ChartRedraw();
     
+    if(_LastError == ERR_CHART_NO_REPLY)
+    {
+        ResetLastError();
+    }
+
     if(_LastError != 0)
       {
-
         Print(
             "\nError: ", _LastError,
             "\nFile: ", __FILE__,
@@ -661,7 +665,12 @@ void OnTick()
     
     ExtDialog.RefreshValues();
 
-    if (sets.TrailingStopPoints > 0) DoTrailingStop();
+    if (sets.TrailingStopPoints > 0)
+    {
+
+        DoTrailingStop();
+    
+    }
     
     if(_LastError != 0)
       {
@@ -826,6 +835,20 @@ void OnChartEvent(const int id,
         {
             ExtDialog.OnClickBtnOrderType();
             ChartRedraw();
+                
+            if(_LastError == ERR_CHART_NO_REPLY)
+            {
+
+                Print(
+                    "\nError: ERR_CHART_NO_REPLY",
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__
+                );
+
+                ResetLastError();
+                
+            }
+
         }
         // Hide/Show lines:
         else if ((MainKey_SwitchHideShowLinesHotKey != 0) && (lparam == MainKey_SwitchHideShowLinesHotKey)
@@ -961,7 +984,24 @@ void OnChartEvent(const int id,
     if (id != CHARTEVENT_CHART_CHANGE)
     {
         ExtDialog.OnEvent(id, lparam, dparam, sparam);
-        if (id >= CHARTEVENT_CUSTOM) ChartRedraw();
+        if (id >= CHARTEVENT_CUSTOM) 
+        {
+            
+            ChartRedraw();
+                
+            if(_LastError == ERR_CHART_NO_REPLY)
+            {
+                        
+                Print(
+                    "\nError: ERR_CHART_NO_REPLY",
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__
+                );
+
+                ResetLastError();
+            }
+
+        }
     }
 
     // Recalculate on chart changes, clicks, and certain object dragging.
@@ -1024,6 +1064,19 @@ void OnChartEvent(const int id,
         // Remember if the chart is on top or is minimized.
         prev_chart_on_top = ChartGetInteger(ChartID(), CHART_BRING_TO_TOP);
         ChartRedraw();
+            
+        if(_LastError == ERR_CHART_NO_REPLY)
+        {
+                
+            Print(
+                "\nError: ERR_CHART_NO_REPLY",
+                "\nFunction: ", __FUNCTION__,
+                "\nLine: ", __LINE__
+            );
+
+            ResetLastError();
+        }
+
     }
     
     if(_LastError != 0)
@@ -1053,6 +1106,20 @@ void OnTrade()
     ExtDialog.RefreshValues();
     ChartRedraw();
     
+    if(_LastError == ERR_CHART_NO_REPLY)
+    {
+
+        Print(
+            "\nError: ERR_CHART_NO_REPLY",
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        ResetLastError();
+
+    }
+    
     if(_LastError != 0)
       {
 
@@ -1081,6 +1148,19 @@ void OnTimer()
     if (GetTickCount() - LastRecalculationTime < 1000) return; // Do not recalculate on timer if less than 1 second passed.
     ExtDialog.RefreshValues();
     ChartRedraw();
+
+    if(_LastError == ERR_CHART_NO_REPLY)
+    {
+
+        Print(
+            "\nError: ERR_CHART_NO_REPLY",
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        ResetLastError();
+
+    }
     
     if(_LastError != 0)
       {
