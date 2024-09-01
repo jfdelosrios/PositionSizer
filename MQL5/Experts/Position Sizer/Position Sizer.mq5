@@ -440,6 +440,21 @@ int OnInit()
     
     // Brings panel on top of other objects without actual maximization of the panel.
     ExtDialog.HideShowMaximize();
+
+    if(_LastError == ERR_OBJECT_NOT_FOUND)
+      {
+
+        Print(
+            "\nError: ERR_OBJECT_NOT_FOUND",
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        return INIT_FAILED;
+
+      }
+      
     if (!Dont_Move_the_Panel_to_Default_Corner_X_Y)
     {
         int new_x = DefaultPanelPositionX, new_y = DefaultPanelPositionY;
@@ -562,6 +577,9 @@ int OnInit()
 
 void OnDeinit(const int reason)
 {
+
+    ResetLastError();
+    
     DeinitializationReason = reason; // Remember reason to avoid recreating the panel in the OnInit() if it is not deleted here.
     
     EventKillTimer();
@@ -574,7 +592,22 @@ void OnDeinit(const int reason)
         if ((reason == REASON_REMOVE) || (reason == REASON_PROGRAM))
         {
             if (SettingsFile == "") ExtDialog.DeleteSettingsFile();
-            if (!FileDelete(ExtDialog.IniFileName() + ExtDialog.IniFileExt())) Print(TRANSLATION_MESSAGE_FAILED_DELETE_INI + ": ", GetLastError());
+            
+            if (FileIsExist(ExtDialog.IniFileName() + ExtDialog.IniFileExt()))
+            {
+                if (!FileDelete(ExtDialog.IniFileName() + ExtDialog.IniFileExt())) Print(TRANSLATION_MESSAGE_FAILED_DELETE_INI + ": ", GetLastError());
+            }
+            else
+            {
+            
+                if(_LastError == ERR_FILE_NOT_EXIST)
+                {
+                
+                    ResetLastError();
+        
+                }
+                
+            }
         }
     }
     
@@ -606,6 +639,19 @@ void OnDeinit(const int reason)
     ObjectsDeleteAll(0, ObjectPrefix + "BE"); // Delete all BE lines and labels.
     
     ChartRedraw();
+    
+    if(_LastError != 0)
+      {
+
+        Print(
+            "\nError: ", _LastError,
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+      }
+      
 }
 
 void OnTick()

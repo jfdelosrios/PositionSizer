@@ -4629,7 +4629,7 @@ void CPositionSizeCalculator::OnEndEditEdtExpiry()
 //|+----------------------+
 bool CPositionSizeCalculator::SaveSettingsOnDisk(string symbol = "")
 {
-    Print(TRANSLATION_MESSAGE_TRYING_TO_SAVE_FILE + ": " + m_FileName + ".");
+    Print("\n", TRANSLATION_MESSAGE_TRYING_TO_SAVE_FILE + ": " + m_FileName + ".");
 
     int fh;
     // Save to new format only.
@@ -4803,120 +4803,145 @@ bool CPositionSizeCalculator::SaveSettingsOnDisk(string symbol = "")
     // When the EA is reloaded due to its input parameters change, these should be compared to the new values.
     // If the value is changed, it should be updated in the panel too.
     // Is the EA reloading due to the input parameters change?
-    if (GlobalVariableGet("PS-" + IntegerToString(ChartID()) + "-Parameters") > 0)
-    {
-        FileWrite(fh, "Parameter_DefaultTradeDirection");
-        FileWrite(fh, IntegerToString(DefaultTradeDirection));
-        FileWrite(fh, "Parameter_DefaultSL");
-        FileWrite(fh, IntegerToString(DefaultSL));
-        FileWrite(fh, "Parameter_DefaultTP");
-        FileWrite(fh, IntegerToString(DefaultTP));
-        FileWrite(fh, "Parameter_DefaultShowLines");
-        FileWrite(fh, IntegerToString(DefaultShowLines));
-        FileWrite(fh, "Parameter_DefaultLinesSelected");
-        FileWrite(fh, IntegerToString(DefaultLinesSelected));
-        FileWrite(fh, "Parameter_DefaultATRPeriod");
-        FileWrite(fh, IntegerToString(DefaultATRPeriod));
-        FileWrite(fh, "Parameter_DefaultATRMultiplierSL");
-        FileWrite(fh, DoubleToString(DefaultATRMultiplierSL, 2));
-        FileWrite(fh, "Parameter_DefaultATRMultiplierTP");
-        FileWrite(fh, DoubleToString(DefaultATRMultiplierTP, 2));
-        FileWrite(fh, "Parameter_DefaultATRTimeframe");
-        FileWrite(fh, IntegerToString(DefaultATRTimeframe));
-        FileWrite(fh, "Parameter_DefaultEntryType");
-        FileWrite(fh, IntegerToString(DefaultEntryType));
-        FileWrite(fh, "Parameter_DefaultCommission");
-        FileWrite(fh, DoubleToString(DefaultCommission, CommissionDecimals));
-        FileWrite(fh, "Parameter_DefaultCommissionType");
-        FileWrite(fh, IntegerToString(DefaultCommissionType));
-        FileWrite(fh, "Parameter_DefaultAccountButton");
-        FileWrite(fh, IntegerToString(DefaultAccountButton));
-        FileWrite(fh, "Parameter_CustomBalance");
-        FileWrite(fh, DoubleToString(CustomBalance));
-        FileWrite(fh, "Parameter_DefaultRisk");
-        FileWrite(fh, DoubleToString(DefaultRisk, 2));
-        FileWrite(fh, "Parameter_DefaultMoneyRisk");
-        FileWrite(fh, DoubleToString(DefaultMoneyRisk, AccountCurrencyDigits));
-        FileWrite(fh, "Parameter_DefaultPositionSize");
-        FileWrite(fh, DoubleToString(DefaultPositionSize, LotStep_digits));
-        FileWrite(fh, "Parameter_DefaultCountPendingOrders");
-        FileWrite(fh, IntegerToString(DefaultCountPendingOrders));
-        FileWrite(fh, "Parameter_DefaultIgnoreOrdersWithoutSL");
-        FileWrite(fh, IntegerToString(DefaultIgnoreOrdersWithoutSL));
-        FileWrite(fh, "Parameter_DefaultIgnoreOrdersWithoutTP");
-        FileWrite(fh, IntegerToString(DefaultIgnoreOrdersWithoutTP));
-        FileWrite(fh, "Parameter_DefaultIgnoreOtherSymbols");
-        FileWrite(fh, IntegerToString(DefaultIgnoreOtherSymbols));
-        FileWrite(fh, "Parameter_DefaultCustomLeverage");
-        FileWrite(fh, DoubleToString(DefaultCustomLeverage));
-        FileWrite(fh, "Parameter_DefaultMagicNumber");
-        FileWrite(fh, IntegerToString(DefaultMagicNumber));
-        FileWrite(fh, "Parameter_DefaultCommentary");
-        FileWrite(fh, DefaultCommentary);
-        FileWrite(fh, "Parameter_DefaultCommentAutoSuffix");
-        FileWrite(fh, IntegerToString(DefaultCommentAutoSuffix));
-        FileWrite(fh, "Parameter_DefaultDisableTradingWhenLinesAreHidden");
-        FileWrite(fh, IntegerToString(DefaultDisableTradingWhenLinesAreHidden));
-        FileWrite(fh, "Parameter_DefaultMaxSlippage");
-        FileWrite(fh, IntegerToString(DefaultMaxSlippage));
-        FileWrite(fh, "Parameter_DefaultMaxSpread");
-        FileWrite(fh, IntegerToString(DefaultMaxSpread));
-        FileWrite(fh, "Parameter_DefaultMaxEntrySLDistance");
-        FileWrite(fh, IntegerToString(DefaultMaxEntrySLDistance));
-        FileWrite(fh, "Parameter_DefaultMinEntrySLDistance");
-        FileWrite(fh, IntegerToString(DefaultMinEntrySLDistance));
-        FileWrite(fh, "Parameter_DefaultMaxPositionSizeTotal");
-        FileWrite(fh, DoubleToString(DefaultMaxPositionSizeTotal, LotStep_digits));
-        FileWrite(fh, "Parameter_DefaultMaxPositionSizePerSymbol");
-        FileWrite(fh, DoubleToString(DefaultMaxPositionSizePerSymbol, LotStep_digits));
-        FileWrite(fh, "Parameter_DefaultSubtractOPV");
-        FileWrite(fh, IntegerToString(DefaultSubtractOPV));
-        FileWrite(fh, "Parameter_DefaultSubtractPOV");
-        FileWrite(fh, IntegerToString(DefaultSubtractPOV));
-        FileWrite(fh, "Parameter_DefaultDoNotApplyStopLoss");
-        FileWrite(fh, IntegerToString(DefaultDoNotApplyStopLoss));
-        FileWrite(fh, "Parameter_DefaultDoNotApplyTakeProfit");
-        FileWrite(fh, IntegerToString(DefaultDoNotApplyTakeProfit));
-        FileWrite(fh, "Parameter_DefaultAskForConfirmation");
-        FileWrite(fh, IntegerToString(DefaultAskForConfirmation));
-        FileWrite(fh, "Parameter_DefaultPanelPositionCorner");
-        FileWrite(fh, IntegerToString(DefaultPanelPositionCorner));
-        FileWrite(fh, "Parameter_DefaultPanelPositionX");
-        FileWrite(fh, IntegerToString(DefaultPanelPositionX));
-        FileWrite(fh, "Parameter_DefaultPanelPositionY");
-        FileWrite(fh, IntegerToString(DefaultPanelPositionY));
-        FileWrite(fh, "Parameter_DefaultTPLockedOnSL");
-        FileWrite(fh, IntegerToString(DefaultTPLockedOnSL));
-        FileWrite(fh, "Parameter_DefaultTrailingStop");
-        FileWrite(fh, IntegerToString(DefaultTrailingStop));
-        FileWrite(fh, "Parameter_DefaultBreakEven");
-        FileWrite(fh, IntegerToString(DefaultBreakEven));
-        FileWrite(fh, "Parameter_DefaultExpiryMinutes");
-        FileWrite(fh, IntegerToString(DefaultExpiryMinutes));
-        FileWrite(fh, "Parameter_DefaultSpreadAdjustmentSL");
-        FileWrite(fh, IntegerToString(DefaultSpreadAdjustmentSL));
-        FileWrite(fh, "Parameter_DefaultSpreadAdjustmentTP");
-        FileWrite(fh, IntegerToString(DefaultSpreadAdjustmentTP));
-        FileWrite(fh, "Parameter_DefaultMaxNumberOfTradesTotal");
-        FileWrite(fh, IntegerToString(DefaultMaxNumberOfTradesTotal));
-        FileWrite(fh, "Parameter_DefaultMaxNumberOfTradesPerSymbol");
-        FileWrite(fh, IntegerToString(DefaultMaxNumberOfTradesPerSymbol));
-        FileWrite(fh, "Parameter_DefaultMaxRiskTotal");
-        FileWrite(fh, DoubleToString(DefaultMaxRiskTotal));
-        FileWrite(fh, "Parameter_DefaultMaxRiskPerSymbol");
-        FileWrite(fh, DoubleToString(DefaultMaxRiskPerSymbol));
-        // Not a part of sets, but needed for proper deletion of unnecessary additional TP lines.
-        FileWrite(fh, "Parameter_DefaultTakeProfitsNumber");
-        FileWrite(fh, IntegerToString(DefaultTakeProfitsNumber));
-        FileWrite(fh, "Parameter_DefaultSLDistanceInPoints");
-        FileWrite(fh, IntegerToString(DefaultSLDistanceInPoints));
-        FileWrite(fh, "Parameter_DefaultTPDistanceInPoints");
-        FileWrite(fh, IntegerToString(DefaultTPDistanceInPoints));
-    }
-
+    double varGlobal_1;
+    if(GlobalVariableGet( 
+         "PS-" + IntegerToString(ChartID()) + "-Parameters",
+         varGlobal_1
+      ))
+      {
+             
+          if (varGlobal_1 > 0)
+          {  
+              FileWrite(fh, "Parameter_DefaultTradeDirection");
+              FileWrite(fh, IntegerToString(DefaultTradeDirection));
+              FileWrite(fh, "Parameter_DefaultSL");
+              FileWrite(fh, IntegerToString(DefaultSL));
+              FileWrite(fh, "Parameter_DefaultTP");
+              FileWrite(fh, IntegerToString(DefaultTP));
+              FileWrite(fh, "Parameter_DefaultShowLines");
+              FileWrite(fh, IntegerToString(DefaultShowLines));
+              FileWrite(fh, "Parameter_DefaultLinesSelected");
+              FileWrite(fh, IntegerToString(DefaultLinesSelected));
+              FileWrite(fh, "Parameter_DefaultATRPeriod");
+              FileWrite(fh, IntegerToString(DefaultATRPeriod));
+              FileWrite(fh, "Parameter_DefaultATRMultiplierSL");
+              FileWrite(fh, DoubleToString(DefaultATRMultiplierSL, 2));
+              FileWrite(fh, "Parameter_DefaultATRMultiplierTP");
+              FileWrite(fh, DoubleToString(DefaultATRMultiplierTP, 2));
+              FileWrite(fh, "Parameter_DefaultATRTimeframe");
+              FileWrite(fh, IntegerToString(DefaultATRTimeframe));
+              FileWrite(fh, "Parameter_DefaultEntryType");
+              FileWrite(fh, IntegerToString(DefaultEntryType));
+              FileWrite(fh, "Parameter_DefaultCommission");
+              FileWrite(fh, DoubleToString(DefaultCommission, CommissionDecimals));
+              FileWrite(fh, "Parameter_DefaultCommissionType");
+              FileWrite(fh, IntegerToString(DefaultCommissionType));
+              FileWrite(fh, "Parameter_DefaultAccountButton");
+              FileWrite(fh, IntegerToString(DefaultAccountButton));
+              FileWrite(fh, "Parameter_CustomBalance");
+              FileWrite(fh, DoubleToString(CustomBalance));
+              FileWrite(fh, "Parameter_DefaultRisk");
+              FileWrite(fh, DoubleToString(DefaultRisk, 2));
+              FileWrite(fh, "Parameter_DefaultMoneyRisk");
+              FileWrite(fh, DoubleToString(DefaultMoneyRisk, AccountCurrencyDigits));
+              FileWrite(fh, "Parameter_DefaultPositionSize");
+              FileWrite(fh, DoubleToString(DefaultPositionSize, LotStep_digits));
+              FileWrite(fh, "Parameter_DefaultCountPendingOrders");
+              FileWrite(fh, IntegerToString(DefaultCountPendingOrders));
+              FileWrite(fh, "Parameter_DefaultIgnoreOrdersWithoutSL");
+              FileWrite(fh, IntegerToString(DefaultIgnoreOrdersWithoutSL));
+              FileWrite(fh, "Parameter_DefaultIgnoreOrdersWithoutTP");
+              FileWrite(fh, IntegerToString(DefaultIgnoreOrdersWithoutTP));
+              FileWrite(fh, "Parameter_DefaultIgnoreOtherSymbols");
+              FileWrite(fh, IntegerToString(DefaultIgnoreOtherSymbols));
+              FileWrite(fh, "Parameter_DefaultCustomLeverage");
+              FileWrite(fh, DoubleToString(DefaultCustomLeverage));
+              FileWrite(fh, "Parameter_DefaultMagicNumber");
+              FileWrite(fh, IntegerToString(DefaultMagicNumber));
+              FileWrite(fh, "Parameter_DefaultCommentary");
+              FileWrite(fh, DefaultCommentary);
+              FileWrite(fh, "Parameter_DefaultCommentAutoSuffix");
+              FileWrite(fh, IntegerToString(DefaultCommentAutoSuffix));
+              FileWrite(fh, "Parameter_DefaultDisableTradingWhenLinesAreHidden");
+              FileWrite(fh, IntegerToString(DefaultDisableTradingWhenLinesAreHidden));
+              FileWrite(fh, "Parameter_DefaultMaxSlippage");
+              FileWrite(fh, IntegerToString(DefaultMaxSlippage));
+              FileWrite(fh, "Parameter_DefaultMaxSpread");
+              FileWrite(fh, IntegerToString(DefaultMaxSpread));
+              FileWrite(fh, "Parameter_DefaultMaxEntrySLDistance");
+              FileWrite(fh, IntegerToString(DefaultMaxEntrySLDistance));
+              FileWrite(fh, "Parameter_DefaultMinEntrySLDistance");
+              FileWrite(fh, IntegerToString(DefaultMinEntrySLDistance));
+              FileWrite(fh, "Parameter_DefaultMaxPositionSizeTotal");
+              FileWrite(fh, DoubleToString(DefaultMaxPositionSizeTotal, LotStep_digits));
+              FileWrite(fh, "Parameter_DefaultMaxPositionSizePerSymbol");
+              FileWrite(fh, DoubleToString(DefaultMaxPositionSizePerSymbol, LotStep_digits));
+              FileWrite(fh, "Parameter_DefaultSubtractOPV");
+              FileWrite(fh, IntegerToString(DefaultSubtractOPV));
+              FileWrite(fh, "Parameter_DefaultSubtractPOV");
+              FileWrite(fh, IntegerToString(DefaultSubtractPOV));
+              FileWrite(fh, "Parameter_DefaultDoNotApplyStopLoss");
+              FileWrite(fh, IntegerToString(DefaultDoNotApplyStopLoss));
+              FileWrite(fh, "Parameter_DefaultDoNotApplyTakeProfit");
+              FileWrite(fh, IntegerToString(DefaultDoNotApplyTakeProfit));
+              FileWrite(fh, "Parameter_DefaultAskForConfirmation");
+              FileWrite(fh, IntegerToString(DefaultAskForConfirmation));
+              FileWrite(fh, "Parameter_DefaultPanelPositionCorner");
+              FileWrite(fh, IntegerToString(DefaultPanelPositionCorner));
+              FileWrite(fh, "Parameter_DefaultPanelPositionX");
+              FileWrite(fh, IntegerToString(DefaultPanelPositionX));
+              FileWrite(fh, "Parameter_DefaultPanelPositionY");
+              FileWrite(fh, IntegerToString(DefaultPanelPositionY));
+              FileWrite(fh, "Parameter_DefaultTPLockedOnSL");
+              FileWrite(fh, IntegerToString(DefaultTPLockedOnSL));
+              FileWrite(fh, "Parameter_DefaultTrailingStop");
+              FileWrite(fh, IntegerToString(DefaultTrailingStop));
+              FileWrite(fh, "Parameter_DefaultBreakEven");
+              FileWrite(fh, IntegerToString(DefaultBreakEven));
+              FileWrite(fh, "Parameter_DefaultExpiryMinutes");
+              FileWrite(fh, IntegerToString(DefaultExpiryMinutes));
+              FileWrite(fh, "Parameter_DefaultSpreadAdjustmentSL");
+              FileWrite(fh, IntegerToString(DefaultSpreadAdjustmentSL));
+              FileWrite(fh, "Parameter_DefaultSpreadAdjustmentTP");
+              FileWrite(fh, IntegerToString(DefaultSpreadAdjustmentTP));
+              FileWrite(fh, "Parameter_DefaultMaxNumberOfTradesTotal");
+              FileWrite(fh, IntegerToString(DefaultMaxNumberOfTradesTotal));
+              FileWrite(fh, "Parameter_DefaultMaxNumberOfTradesPerSymbol");
+              FileWrite(fh, IntegerToString(DefaultMaxNumberOfTradesPerSymbol));
+              FileWrite(fh, "Parameter_DefaultMaxRiskTotal");
+              FileWrite(fh, DoubleToString(DefaultMaxRiskTotal));
+              FileWrite(fh, "Parameter_DefaultMaxRiskPerSymbol");
+              FileWrite(fh, DoubleToString(DefaultMaxRiskPerSymbol));
+              // Not a part of sets, but needed for proper deletion of unnecessary additional TP lines.
+              FileWrite(fh, "Parameter_DefaultTakeProfitsNumber");
+              FileWrite(fh, IntegerToString(DefaultTakeProfitsNumber));
+              FileWrite(fh, "Parameter_DefaultSLDistanceInPoints");
+              FileWrite(fh, IntegerToString(DefaultSLDistanceInPoints));
+              FileWrite(fh, "Parameter_DefaultTPDistanceInPoints");
+              FileWrite(fh, IntegerToString(DefaultTPDistanceInPoints));
+          }
+            
+      }
+      else
+        {
+         
+       if(_LastError == ERR_GLOBALVARIABLE_NOT_FOUND)
+         {
+   
+           Print(
+               "\nError: ERR_GLOBALVARIABLE_NOT_FOUND",
+               "\nFile: ", __FILE__,
+               "\nFunction: ", __FUNCTION__,
+               "\nLine: ", __LINE__
+           );
+   
+         }
+         
+        }
+    
     FileClose(fh);
 
-    Print(TRANSLATION_MESSAGE_SAVED_SETTINGS);
+    Print("\n",TRANSLATION_MESSAGE_SAVED_SETTINGS);
     return true;
 }
 
@@ -4937,8 +4962,38 @@ bool CPositionSizeCalculator::LoadSettingsFromDisk()
     }
     else // No new format file, try to load old format.
     {
+    
+       if(_LastError == ERR_FILE_NOT_EXIST)
+         {
+           /*
+           Print(
+               "\nError: ERR_FILE_NOT_EXIST",
+               "\nFile: ", __FILE__,
+               "\nFunction: ", __FUNCTION__,
+               "\nLine: ", __LINE__
+           );
+           */
+           ResetLastError();
+   
+         }
+
         if (!FileIsExist("PS_" + m_FileName))
         {
+            
+            if(_LastError == ERR_FILE_NOT_EXIST)
+                {
+                /*
+                Print(
+                    "\nError: ERR_FILE_NOT_EXIST",
+                    "\nFile: ", __FILE__,
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__
+                );
+                */
+                ResetLastError();
+        
+                }
+
             Print(TRANSLATION_MESSAGE_NO_SETTINGS_FILE_TO_LOAD);
             return false;
         }
@@ -5418,10 +5473,40 @@ bool CPositionSizeCalculator::DeleteSettingsFile()
     string fn_with_path = "PS_" + m_FileName;
     if (!FileIsExist(fn_with_path)) // Try old location.
     {
+    
+       if(_LastError == ERR_FILE_NOT_EXIST)
+         {
+           /*
+           Print(
+               "\nError: ERR_FILE_NOT_EXIST",
+               "\nFile: ", __FILE__,
+               "\nFunction: ", __FUNCTION__,
+               "\nLine: ", __LINE__
+           );
+           */
+           ResetLastError();
+   
+         }
+
         fn_with_path = "PS_Settings\\" + m_FileName; // Change to new location.
     }
     if (!FileIsExist(fn_with_path))
     {
+    
+       if(_LastError == ERR_FILE_NOT_EXIST)
+         {
+           /*
+           Print(
+               "\nError: ERR_FILE_NOT_EXIST",
+               "\nFile: ", __FILE__,
+               "\nFunction: ", __FUNCTION__,
+               "\nLine: ", __LINE__
+           );
+           */
+           ResetLastError();
+   
+         }
+         
         Print(TRANSLATION_MESSAGE_NO_SETTINGS_FILE_TO_DELETE);
         return false;
     }
@@ -5442,6 +5527,21 @@ void CPositionSizeCalculator::HideShowMaximize()
     remember_top = Top();
 
     Hide();
+    
+    if(_LastError == ERR_OBJECT_NOT_FOUND)
+      {
+
+        Print(
+            "\nError: ERR_OBJECT_NOT_FOUND",
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        return;
+
+      }
+    
     Show();
     NoPanelMaximization = true;
     Maximize();
