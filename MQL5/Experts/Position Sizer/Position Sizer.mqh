@@ -4905,7 +4905,7 @@ bool CPositionSizeCalculator::SaveSettingsOnDisk(string symbol = "")
     // When the EA is reloaded due to its input parameters change, these should be compared to the new values.
     // If the value is changed, it should be updated in the panel too.
     // Is the EA reloading due to the input parameters change?
-    double varGlobal_1;
+    double varGlobal_1 = 0;
     if(GlobalVariableGet( 
          "PS-" + IntegerToString(ChartID()) + "-Parameters",
          varGlobal_1
@@ -6244,11 +6244,11 @@ void Initialization()
 
     // Using TP distance in points but just switched from the TP given as a level on an already attached indicator.
     if ((sets.TPDistanceInPoints) && (sets.TakeProfit == 0) && (sets.TakeProfitLevel != 0)) sets.TakeProfit = (int)MathRound(MathAbs((sets.TakeProfitLevel - sets.EntryLevel) / _Point));
-    if (sets.EntryLevel - sets.StopLossLevel == 0)
-    {
-        Print(TRANSLATION_MESSAGE_ENTRY_SL_DIFFERENT_NON_ZERO);
-//        return;
-    }
+    //if (sets.EntryLevel - sets.StopLossLevel == 0)
+    //{
+        //Print(TRANSLATION_MESSAGE_ENTRY_SL_DIFFERENT_NON_ZERO);
+        //return;
+    //}
 
     if (sets.EntryType == Instant)
     {
@@ -6884,7 +6884,7 @@ void CPositionSizeCalculator::RecalculatePositionSize()
 
     if (StopLoss == 0)
     {
-        Print(TRANSLATION_MESSAGE_ENTRY_SL_DIFFERENT);
+        //Print(TRANSLATION_MESSAGE_ENTRY_SL_DIFFERENT);
         return;
     }
 
