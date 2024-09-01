@@ -1552,7 +1552,7 @@ bool CPositionSizeCalculator::ReadLineObject(
    )
 {
 
-    if(!ObjectFind(ChartID(), _nameObject))
+    if(ObjectFind(ChartID(), _nameObject) < 0)
     {
         /*
         if(_LastError == ERR_OBJECT_NOT_FOUND)
