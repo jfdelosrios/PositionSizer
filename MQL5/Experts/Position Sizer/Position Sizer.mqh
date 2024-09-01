@@ -4,6 +4,7 @@
 //|                                       https://www.earnforex.com/ |
 //+------------------------------------------------------------------+
 #include "Defines.mqh"
+#include <Trade\SymbolInfo.mqh>
 
 class CPositionSizeCalculator : public CAppDialog
 {
@@ -28,6 +29,16 @@ private:
     CButton          AdditionalTPButtonsIncrease[], AdditionalTPButtonsDecrease[];
     // Store ordered and named panel objects arranged by tabs.
     CPanelList       *MainTabList, *RiskTabList, *MarginTabList, *SwapsTabList, *TradingTabList;
+    
+    CSymbolInfo      m_symbol;
+    
+    bool             ReadLineObject(
+                        const string _nameObject,
+                        double &read_value
+                        );
+   
+    void             CalculateRiskAndPositionSize();
+    void             RecalculatePositionSize();
     
     // Some of the panel measurement parameters are used by more than one method:
     int              first_column_start, normal_label_width, normal_edit_width, second_column_start, element_height, third_column_start, narrow_label_width, v_spacing, multi_tp_column_start,
@@ -375,6 +386,15 @@ bool CPositionSizeCalculator::LabelCreate(CList *list, CLabel &Lbl, int X1, int 
 //+-----------------------+
 bool CPositionSizeCalculator::Create(const long chart, const string name, const int subwin, const int x1, const int y1)
 {
+
+    if(!m_symbol.Name(_Symbol))
+        {
+            Print("!_simbolo.Name, " + __FUNCTION__);
+            return false;
+        }
+
+    Print("The symbol was loaded succesfully.");
+
     double screen_dpi = (double)TerminalInfoInteger(TERMINAL_SCREEN_DPI);
     m_DPIScale = screen_dpi / 96.0;
 
@@ -1522,6 +1542,97 @@ void CPositionSizeCalculator::MoveAndResize()
     NoPanelMaximization = false;
 }
 
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool CPositionSizeCalculator::ReadLineObject(
+   const string _nameObject,
+   double &read_value
+   )
+{
+
+    if(!ObjectFind(ChartID(), _nameObject))
+    {
+        /*
+        if(_LastError == ERR_OBJECT_NOT_FOUND)
+        {
+           
+            if(_printMessage)
+            {
+            
+                Print(
+                    "\n!ObjectFind",
+                    "\nError: ERR_OBJECT_NOT_FOUND",
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__,
+                    "\nNameObject: ", _nameObject
+
+                );
+                 
+            }
+           
+        }
+        else
+        {
+           
+            if(_printMessage)
+            {
+            
+                Print(
+                    "\n!ObjectFind",
+                    "\nError: ", _LastError,
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__,
+                    "\nNameObject: ", _nameObject
+                );
+              
+            }
+         
+        }
+        */
+
+        return false;
+        
+    }
+
+    if (!ObjectGetDouble(ChartID(), _nameObject, OBJPROP_PRICE, 0, read_value))
+    {
+          
+        Print(
+            "\n!ObjectGetDouble",
+            "\nError: ", _LastError,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__,
+            "\nNameObject: ", _nameObject
+        );
+     
+        return false;
+
+    }
+        
+    read_value = m_symbol.NormalizePrice(read_value);
+
+    if (!ObjectSetDouble(ChartID(), _nameObject, OBJPROP_PRICE, read_value))
+    {
+              
+        Print(
+            "\n!ObjectGetDouble",
+            "\nError: ", _LastError,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__,
+            "\nNameObject: ", _nameObject
+        );
+     
+        return false;
+        
+    }
+
+    return true;
+    
+}
+
+
 bool CPositionSizeCalculator::DisplayValues()
 {
     //=== Spread
@@ -1886,41 +1997,92 @@ void CPositionSizeCalculator::CalculateSettingsBasedOnLines()
         }
     }
 
-    double read_value;
     if ((sets.ATRMultiplierSL == 0) || (!ShowATROptions))
     {
-        if (ObjectGetDouble(ChartID(), ObjectPrefix + "StopLossLine", OBJPROP_PRICE, 0, read_value)) sets.StopLossLevel = NormalizeDouble(read_value, _Digits); // Rewrite value only if line exists.
+
+        if(!ReadLineObject(ObjectPrefix + "StopLossLine", sets.StopLossLevel))
+        {
+            /*
+                Print(
+                    "\n!ReadLineObject",
+                    "\nError: ", _LastError,
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__
+                );
+
+                return;
+            */
+     
+            if(_LastError == ERR_OBJECT_NOT_FOUND) 
+                ResetLastError();
+
+        }
+
     }
+    
     if ((sets.ATRMultiplierTP == 0) || (!ShowATROptions))
     {
-        if (ObjectGetDouble(ChartID(), ObjectPrefix + "TakeProfitLine", OBJPROP_PRICE, 0, read_value)) sets.TakeProfitLevel = NormalizeDouble(read_value, _Digits); // Rewrite value only if line exists.
+
+        if(!ReadLineObject(ObjectPrefix + "TakeProfitLine", sets.TakeProfitLevel))
+        {
+
+            /*
+                Print(
+                    "\n!ReadLineObject",
+                    "\nError: ", _LastError,
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__
+                );
+
+                return;
+            */
+     
+            if(_LastError == ERR_OBJECT_NOT_FOUND)
+                ResetLastError();
+
+        }
+
     }
+    
     for (int i = 1; i < sets.TakeProfitsNumber; i++)
     {
-        if (ObjectGetDouble(ChartID(), ObjectPrefix + "TakeProfitLine" + IntegerToString(i), OBJPROP_PRICE, 0, read_value)) sets.TP[i] = NormalizeDouble(read_value, _Digits); // Rewrite value only if line exists.
-    }
 
-    // Check and adjust for TickSize granularity.
-    if (TickSize > 0)
-    {
-        sets.StopLossLevel = NormalizeDouble(MathRound(sets.StopLossLevel / TickSize) * TickSize, _Digits);
-        if ((!StopLossLineIsBeingMoved) || (sets.ATRMultiplierSL == 0) || (!ShowATROptions)) ObjectSetDouble(ChartID(), ObjectPrefix + "StopLossLine", OBJPROP_PRICE, sets.StopLossLevel);
-        sets.TakeProfitLevel = NormalizeDouble(MathRound(sets.TakeProfitLevel / TickSize) * TickSize, _Digits);
-        if ((!TakeProfitLineIsBeingMoved[0]) || (sets.ATRMultiplierTP == 0) || (!ShowATROptions)) ObjectSetDouble(ChartID(), ObjectPrefix + "TakeProfitLine", OBJPROP_PRICE, sets.TakeProfitLevel);
-        if (sets.TakeProfitsNumber > 1)
-        {
-            for (int i = 0; i < sets.TakeProfitsNumber; i++)
-            {
-                sets.TP[i] = NormalizeDouble(MathRound(sets.TP[i] / TickSize) * TickSize, _Digits);
-            }
-        }
+        if(ReadLineObject(ObjectPrefix + "TakeProfitLine" + IntegerToString(i), sets.TP[i]))
+            continue;
+
+        /*
+            Print(
+                "\n!ReadLineObject",
+                "\nError: ", _LastError,
+                "\nFunction: ", __FUNCTION__,
+                "\nLine: ", __LINE__
+            );
+
+            return;
+        */
+    
+        if(_LastError == ERR_OBJECT_NOT_FOUND)
+            ResetLastError();
+
     }
 
     if (sets.EntryType == Instant)
     {
-        double read_tStopLossLevel;
-        if (!ObjectGetDouble(ChartID(), ObjectPrefix + "StopLossLine", OBJPROP_PRICE, 0, read_tStopLossLevel)) return; // Line was deleted, waiting for automatic restoration.
-        tStopLossLevel = Round(read_tStopLossLevel, _Digits);
+
+        if(!ReadLineObject(ObjectPrefix + "StopLossLine", tStopLossLevel))
+        {
+
+            Print(
+                "\n!ReadLineObject",
+                "\nError: ", _LastError,
+                "\nFunction: ", __FUNCTION__,
+                "\nLine: ", __LINE__
+            );
+
+            return;
+        
+        }
+
         if ((SymbolInfoDouble(_Symbol, SYMBOL_ASK) > 0) && (SymbolInfoDouble(_Symbol, SYMBOL_BID) > 0))
         {
             // Long entry
@@ -1940,19 +2102,50 @@ void CPositionSizeCalculator::CalculateSettingsBasedOnLines()
     }
     else // Pending or Stop Limit.
     {
-        if (ObjectGetDouble(ChartID(), ObjectPrefix + "EntryLine", OBJPROP_PRICE, 0, read_value)) sets.EntryLevel = read_value; // Rewrite value only if line exists.
-        if ((sets.EntryLevel == StopLimit) && (ObjectGetDouble(ChartID(), ObjectPrefix + "StopPriceLine", OBJPROP_PRICE, 0, read_value))) sets.StopPriceLevel = read_value;
-        // Check and adjust for TickSize granularity.
-        if (TickSize > 0)
+
+        if(!ReadLineObject(ObjectPrefix + "EntryLine", sets.EntryLevel))
         {
-            sets.EntryLevel = NormalizeDouble(MathRound(sets.EntryLevel / TickSize) * TickSize, _Digits);
-            ObjectSetDouble(ChartID(), ObjectPrefix + "EntryLine", OBJPROP_PRICE, sets.EntryLevel);
-            if (sets.EntryLevel == StopLimit)
-            {
-                sets.StopPriceLevel = NormalizeDouble(MathRound(sets.StopPriceLevel / TickSize) * TickSize, _Digits);
-                ObjectSetDouble(ChartID(), ObjectPrefix + "StopPriceLine", OBJPROP_PRICE, sets.StopPriceLevel);
-            }
+
+            /*
+                Print(
+                    "\n!ReadLineObject",
+                    "\nError: ", _LastError,
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__
+                );
+
+                return;
+            */
+     
+            if(_LastError == ERR_OBJECT_NOT_FOUND)
+                ResetLastError();
+        
         }
+
+        if (sets.EntryLevel == StopLimit)
+        {
+
+            if(!ReadLineObject(ObjectPrefix + "StopPriceLine", sets.StopPriceLevel))
+            {
+
+                /*
+                    Print(
+                        "\n!ReadLineObject",
+                        "\nError: ", _LastError,
+                        "\nFunction: ", __FUNCTION__,
+                        "\nLine: ", __LINE__
+                    );
+
+                    return;
+                */
+        
+                if(_LastError == ERR_OBJECT_NOT_FOUND)
+                    ResetLastError();
+
+            }
+
+        }
+
     }
 
     // Set line based on the entered SL distance.
@@ -4934,6 +5127,8 @@ bool CPositionSizeCalculator::SaveSettingsOnDisk(string symbol = "")
                "\nFunction: ", __FUNCTION__,
                "\nLine: ", __LINE__
            );
+           
+           ResetLastError();
    
          }
          
@@ -5559,16 +5754,21 @@ void CPositionSizeCalculator::InitATR()
 //+------------------------------------------------------------------+
 void CPositionSizeCalculator::UpdateFixedSL()
 {
-    double read_value;
-    if (!ObjectGetDouble(ChartID(), ObjectPrefix + "StopLossLine", OBJPROP_PRICE, 0, read_value)) return; // Update only if line exists.
-    else sets.StopLossLevel = read_value;
 
-    // Check and adjust for TickSize granularity.
-    if (TickSize > 0)
+    if(!ReadLineObject(ObjectPrefix + "StopLossLine", sets.StopLossLevel))
     {
-        sets.StopLossLevel = NormalizeDouble(MathRound(sets.StopLossLevel / TickSize) * TickSize, _Digits);
-        ObjectSetDouble(ChartID(), ObjectPrefix + "StopLossLine", OBJPROP_PRICE, sets.StopLossLevel);
+
+        Print(
+            "\n!ReadLineObject",
+            "\nError: ", _LastError,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        return;
+    
     }
+
     sets.StopLoss = (int)MathRound(MathAbs(sets.StopLossLevel - sets.EntryLevel) / _Point);
     m_EdtSL.Text(IntegerToString(sets.StopLoss));
 
@@ -5599,16 +5799,21 @@ void CPositionSizeCalculator::UpdateFixedSL()
 //+------------------------------------------------------------------+
 void CPositionSizeCalculator::UpdateFixedTP()
 {
-    double read_value;
-    if (!ObjectGetDouble(ChartID(), ObjectPrefix + "TakeProfitLine", OBJPROP_PRICE, 0, read_value)) return; // Update only if line exists.
-    else sets.TakeProfitLevel = read_value;
 
-    // Check and adjust for TickSize granularity.
-    if (TickSize > 0)
+    if(!ReadLineObject(ObjectPrefix + "TakeProfitLine", sets.TakeProfitLevel))
     {
-        sets.TakeProfitLevel = NormalizeDouble(MathRound(sets.TakeProfitLevel / TickSize) * TickSize, _Digits);
-        ObjectSetDouble(ChartID(), ObjectPrefix + "TakeProfitLine", OBJPROP_PRICE, sets.TakeProfitLevel);
+
+        Print(
+            "\n!ReadLineObject",
+            "\nError: ", _LastError,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        return;
+    
     }
+
     sets.TakeProfit = (int)MathRound(MathAbs(sets.TakeProfitLevel - sets.EntryLevel) / _Point);
     m_EdtTP.Text(IntegerToString(sets.TakeProfit));
 
@@ -5631,16 +5836,21 @@ void CPositionSizeCalculator::UpdateFixedTP()
 //+------------------------------------------------------------------+
 void CPositionSizeCalculator::UpdateAdditionalFixedTP(int i)
 {
-    double read_value;
-    if (!ObjectGetDouble(ChartID(), ObjectPrefix + "TakeProfitLine" + IntegerToString(i), OBJPROP_PRICE, 0, read_value)) return; // Update only if line exists.
-    else sets.TP[i] = NormalizeDouble(read_value, _Digits);
 
-    // Check and adjust for TickSize granularity.
-    if (TickSize > 0)
+    if(!ReadLineObject(ObjectPrefix + "TakeProfitLine" + IntegerToString(i), sets.TP[i]))
     {
-        sets.TP[i] = NormalizeDouble(MathRound(sets.TP[i] / TickSize) * TickSize, _Digits);
-        ObjectSetDouble(ChartID(), ObjectPrefix + "TakeProfitLine" + IntegerToString(i), OBJPROP_PRICE, sets.TP[i]);
+
+        Print(
+            "\n!ReadLineObject",
+            "\nError: ", _LastError,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        return;
+    
     }
+    
     string tp_text = "0";
     // If line's value was zero, then points distance should be also zero.
     if (sets.TP[i] != 0) tp_text = IntegerToString((int)MathRound(MathAbs(sets.TP[i] - sets.EntryLevel) / _Point));
@@ -6555,11 +6765,78 @@ void Initialization()
 //| Main recalculation function used on every tick and on entry/SL   |
 //| line drag.                                                       |
 //+------------------------------------------------------------------+
-void RecalculatePositionSize()
+void CPositionSizeCalculator::RecalculatePositionSize()
 {
-    for (int i = 1; i < sets.TakeProfitsNumber; i++) AdditionalWarningTP[i - 1] = "";
 
-    double Ask, Bid;
+    if(!ReadLineObject(ObjectPrefix + "EntryLine", tEntryLevel))
+    {
+
+        Print(
+            "\n!ReadLineObject",
+            "\nError: ", _LastError,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        return;
+    
+    }
+
+    if(!ReadLineObject(ObjectPrefix + "StopLossLine", tStopLossLevel))
+    {
+
+        Print(
+            "\n!ReadLineObject",
+            "\nError: ", _LastError,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        return;
+    
+    }
+
+    if(!ReadLineObject(ObjectPrefix + "TakeProfitLine", tTakeProfitLevel))
+    {
+    
+        /*
+            Print(
+                "\n!ReadLineObject",
+                "\nError: ", _LastError,
+                "\nFunction: ", __FUNCTION__,
+                "\nLine: ", __LINE__
+            );
+
+            return;
+        */
+    
+        if(_LastError == ERR_OBJECT_NOT_FOUND)
+            ResetLastError();
+                
+        tTakeProfitLevel = 0;
+
+    }
+
+    if (!DisableStopLimit)
+    {
+
+        if(!ReadLineObject(ObjectPrefix + "StopPriceLine", tStopPriceLevel))
+        {
+
+            Print(
+                "\n!ReadLineObject",
+                "\nError: ", _LastError,
+                "\nFunction: ", __FUNCTION__,
+                "\nLine: ", __LINE__
+            );
+
+            return;
+        
+        }
+
+    }
+
+    for (int i = 1; i < sets.TakeProfitsNumber; i++) AdditionalWarningTP[i - 1] = "";
 
     // If could not find account currency, probably not connected. Also check for symbol availability.
     if ((AccountInfoString(ACCOUNT_CURRENCY) == "") || (!TerminalInfoInteger(TERMINAL_CONNECTED) || (!SymbolInfoInteger(Symbol(), SYMBOL_SELECT)))) return;
@@ -6567,21 +6844,9 @@ void RecalculatePositionSize()
     {
         GetSymbolAndAccountData();
     }
-    Bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-    Ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
 
-    double read_tEntryLevel, read_tStopLossLevel, read_tTakeProfitLevel, read_tStopPriceLevel;
-    if (!ObjectGetDouble(ChartID(), ObjectPrefix + "EntryLine", OBJPROP_PRICE, 0, read_tEntryLevel)) return; // Line was deleted, waiting for automatic restoration.
-    tEntryLevel = Round(read_tEntryLevel, _Digits);
-    if (!ObjectGetDouble(ChartID(), ObjectPrefix + "StopLossLine", OBJPROP_PRICE, 0, read_tStopLossLevel)) return;
-    tStopLossLevel = Round(read_tStopLossLevel, _Digits);
-    if (ObjectGetDouble(ChartID(), ObjectPrefix + "TakeProfitLine", OBJPROP_PRICE, 0, read_tTakeProfitLevel)) tTakeProfitLevel = Round(read_tTakeProfitLevel, _Digits);
-    else tTakeProfitLevel = 0;
-    if (!DisableStopLimit)
-    {
-        if (!ObjectGetDouble(ChartID(), ObjectPrefix + "StopPriceLine", OBJPROP_PRICE, 0, read_tStopPriceLevel)) return;
-        tStopPriceLevel = Round(read_tStopPriceLevel, _Digits);
-    }
+    const double Bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+    const double Ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
     
     double StopLevel = SymbolInfoInteger(Symbol(), SYMBOL_TRADE_STOPS_LEVEL) * _Point;
     WarningEntry = "";
@@ -6647,8 +6912,21 @@ void RecalculatePositionSize()
     ArrayResize(add_tTakeProfitLevel, sets.TakeProfitsNumber - 1);
     for (int i = 1; i < sets.TakeProfitsNumber; i++)
     {
-        if (!ObjectGetDouble(ChartID(), ObjectPrefix + "TakeProfitLine" + IntegerToString(i), OBJPROP_PRICE, 0, add_tTakeProfitLevel[i - 1])) return;
-        add_tTakeProfitLevel[i - 1] = Round(add_tTakeProfitLevel[i - 1], _Digits);
+
+        if(!ReadLineObject(ObjectPrefix + "TakeProfitLine" + IntegerToString(i), add_tTakeProfitLevel[i - 1]))
+        {
+
+            Print(
+                "\n!ReadLineObject",
+                "\nError: ", _LastError,
+                "\nFunction: ", __FUNCTION__,
+                "\nLine: ", __LINE__
+            );
+
+            return;
+        
+        }
+
         if (add_tTakeProfitLevel[i - 1] > 0)
         {
             if (MathAbs(add_tTakeProfitLevel[i - 1] - tEntryLevel) < StopLevel) AdditionalWarningTP[i - 1] = " " + TRANSLATION_LABEL_WARNING_TOO_CLOSE;
@@ -6832,7 +7110,7 @@ void GetSymbolAndAccountData()
 //+------------------------------------------------------------------+
 //| Calculates risk size and position size. Sets object values.      |
 //+------------------------------------------------------------------+
-void CalculateRiskAndPositionSize()
+void CPositionSizeCalculator::CalculateRiskAndPositionSize()
 {
     DisplayRisk = sets.Risk;
     double PositionSize = 0;
@@ -6965,10 +7243,30 @@ void CalculateRiskAndPositionSize()
     else MainOutputReward = 0;
 
     // Multiple TPs.
+    double add_tTakeProfitLevel;
     for (int i = 1; i < sets.TakeProfitsNumber; i++)
     {
         AdditionalOutputReward[i - 1] = 0;
-        double add_tTakeProfitLevel = Round(ObjectGetDouble(ChartID(), ObjectPrefix + "TakeProfitLine" + IntegerToString(i), OBJPROP_PRICE), _Digits);
+
+        if(!ReadLineObject(ObjectPrefix + "TakeProfitLine" + IntegerToString(i), add_tTakeProfitLevel))
+        {
+
+            /*
+                Print(
+                    "\n!ReadLineObject",
+                    "\nError: ", _LastError,
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__
+                );
+            */
+        
+            if(_LastError == ERR_OBJECT_NOT_FOUND)
+                ResetLastError();
+
+            continue;
+        
+        }
+        
         if (add_tTakeProfitLevel > 0)
         {
             // If account currency == pair's base currency, adjust UnitCost to future rate (TP). Works only for Forex pairs.
@@ -8095,7 +8393,23 @@ double Round(const double value, const double digits, bool round_down = false)
 string FormatDouble(const string number, const int digits = 2)
 {
     // Find "." position.
+        
     int pos = StringFind(number, ".");
+
+    if(_LastError == ERR_NOTINITIALIZED_STRING)
+    {
+    
+        Print(
+            "\nError: ERR_NOTINITIALIZED_STRING",
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+        
+        ResetLastError();
+        
+    } 
+
     string integer = number;
     string decimal = "";
     if (pos > -1)
@@ -8270,6 +8584,21 @@ void DissectHotKeyCombination(const string hotkey, bool &shift_required, bool &c
     if (StringFind(hotkey, "+") > -1) separator = StringGetCharacter("+", 0);
     else if (StringFind(hotkey, "-") > -1) separator = StringGetCharacter("-", 0);
     else separator = 0;
+
+    if(_LastError == ERR_NOTINITIALIZED_STRING)
+    {
+    
+        Print(
+            "\nError: ERR_NOTINITIALIZED_STRING",
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        ResetLastError();
+        
+    } 
+
     string keys[];
     int n = StringSplit(hotkey, separator, keys);
     if (n < 1) return; // Wrong or empty.
