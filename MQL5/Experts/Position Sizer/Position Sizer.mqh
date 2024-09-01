@@ -1552,7 +1552,7 @@ bool CPositionSizeCalculator::ReadLineObject(
    )
 {
 
-    if(!ObjectFind(ChartID(), _nameObject))
+    if(ObjectFind(ChartID(), _nameObject) < 0)
     {
         /*
         if(_LastError == ERR_OBJECT_NOT_FOUND)
@@ -4996,7 +4996,7 @@ bool CPositionSizeCalculator::SaveSettingsOnDisk(string symbol = "")
     // When the EA is reloaded due to its input parameters change, these should be compared to the new values.
     // If the value is changed, it should be updated in the panel too.
     // Is the EA reloading due to the input parameters change?
-    double varGlobal_1;
+    double varGlobal_1 = 0;
     if(GlobalVariableGet( 
          "PS-" + IntegerToString(ChartID()) + "-Parameters",
          varGlobal_1
@@ -7059,7 +7059,7 @@ void CPositionSizeCalculator::RecalculatePositionSize()
 
     if (StopLoss == 0)
     {
-        Print(TRANSLATION_MESSAGE_ENTRY_SL_DIFFERENT);
+        //Print(TRANSLATION_MESSAGE_ENTRY_SL_DIFFERENT);
         return;
     }
 
