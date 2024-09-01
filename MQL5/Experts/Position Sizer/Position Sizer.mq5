@@ -180,6 +180,9 @@ int Mouse_Last_X = 0, Mouse_Last_Y = 0; // For SL/TP hotkeys.
 
 int OnInit()
 {
+
+    ResetLastError();
+
     if (DarkMode)
     {
         CONTROLS_EDIT_COLOR_ENABLE  = DARKMODE_EDIT_BG_COLOR;
@@ -241,7 +244,7 @@ int OnInit()
     }
 
     bool is_InitControlsValues_required = false;
-    // Normal attempt to load settings fails (attempted in not chart change case and in chart case with 'each pair own settings' case
+    // Normal attempt to load settings fails (attempted in not chart change case and in chart case with 'each pair own settings' case)
     if ((((DeinitializationReason != REASON_CHARTCHANGE) || ((DeinitializationReason == REASON_CHARTCHANGE) && (OldSymbol != _Symbol) && (SymbolChange == SYMBOL_CHART_CHANGE_EACH_OWN))) && (!ExtDialog.LoadSettingsFromDisk())) 
     // OR chart change with hard_reset configured and with symbol change.
       || ((DeinitializationReason == REASON_CHARTCHANGE) && (SymbolChange == SYMBOL_CHART_CHANGE_HARD_RESET) && (OldSymbol != _Symbol)))
@@ -437,6 +440,21 @@ int OnInit()
     
     // Brings panel on top of other objects without actual maximization of the panel.
     ExtDialog.HideShowMaximize();
+
+    if(_LastError == ERR_OBJECT_NOT_FOUND)
+      {
+
+        Print(
+            "\nError: ERR_OBJECT_NOT_FOUND",
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        return INIT_FAILED;
+
+      }
+      
     if (!Dont_Move_the_Panel_to_Default_Corner_X_Y)
     {
         int new_x = DefaultPanelPositionX, new_y = DefaultPanelPositionY;
@@ -540,11 +558,28 @@ int OnInit()
     // If symbol change with a reset was enacted.
     if (is_InitControlsValues_required) ExtDialog.InitControlsValues();
 
+    if(_LastError != 0)
+      {
+
+        Print(
+            "\nError: ", _LastError,
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        return INIT_FAILED;
+
+      }
+
     return INIT_SUCCEEDED;
 }
 
 void OnDeinit(const int reason)
 {
+
+    ResetLastError();
+    
     DeinitializationReason = reason; // Remember reason to avoid recreating the panel in the OnInit() if it is not deleted here.
     
     EventKillTimer();
@@ -557,7 +592,22 @@ void OnDeinit(const int reason)
         if ((reason == REASON_REMOVE) || (reason == REASON_PROGRAM))
         {
             if (SettingsFile == "") ExtDialog.DeleteSettingsFile();
-            if (!FileDelete(ExtDialog.IniFileName() + ExtDialog.IniFileExt())) Print(TRANSLATION_MESSAGE_FAILED_DELETE_INI + ": ", GetLastError());
+            
+            if (FileIsExist(ExtDialog.IniFileName() + ExtDialog.IniFileExt()))
+            {
+                if (!FileDelete(ExtDialog.IniFileName() + ExtDialog.IniFileExt())) Print(TRANSLATION_MESSAGE_FAILED_DELETE_INI + ": ", GetLastError());
+            }
+            else
+            {
+            
+                if(_LastError == ERR_FILE_NOT_EXIST)
+                {
+                
+                    ResetLastError();
+        
+                }
+                
+            }
         }
     }
     
@@ -589,13 +639,48 @@ void OnDeinit(const int reason)
     ObjectsDeleteAll(0, ObjectPrefix + "BE"); // Delete all BE lines and labels.
     
     ChartRedraw();
+    
+    if(_LastError == ERR_CHART_NO_REPLY)
+    {
+        ResetLastError();
+    }
+
+    if(_LastError != 0)
+      {
+        Print(
+            "\nError: ", _LastError,
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+      }
+      
 }
 
 void OnTick()
 {
+
+    ResetLastError();
+    
     ExtDialog.RefreshValues();
 
     if (sets.TrailingStopPoints > 0) DoTrailingStop();
+    
+    if(_LastError != 0)
+      {
+
+        Print(
+            "\nError: ", _LastError,
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        ExpertRemove();
+
+      }
+      
 }
 
 void OnChartEvent(const int id,
@@ -603,6 +688,9 @@ void OnChartEvent(const int id,
                   const double &dparam,
                   const string &sparam)
 {
+
+    ResetLastError();
+
     if (id == CHARTEVENT_MOUSE_MOVE)
     {
         Mouse_Last_X = (int)lparam;
@@ -742,6 +830,20 @@ void OnChartEvent(const int id,
         {
             ExtDialog.OnClickBtnOrderType();
             ChartRedraw();
+                
+            if(_LastError == ERR_CHART_NO_REPLY)
+            {
+
+                Print(
+                    "\nError: ERR_CHART_NO_REPLY",
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__
+                );
+
+                ResetLastError();
+                
+            }
+
         }
         // Hide/Show lines:
         else if ((MainKey_SwitchHideShowLinesHotKey != 0) && (lparam == MainKey_SwitchHideShowLinesHotKey)
@@ -877,7 +979,24 @@ void OnChartEvent(const int id,
     if (id != CHARTEVENT_CHART_CHANGE)
     {
         ExtDialog.OnEvent(id, lparam, dparam, sparam);
-        if (id >= CHARTEVENT_CUSTOM) ChartRedraw();
+        if (id >= CHARTEVENT_CUSTOM) 
+        {
+            
+            ChartRedraw();
+                
+            if(_LastError == ERR_CHART_NO_REPLY)
+            {
+                        
+                Print(
+                    "\nError: ERR_CHART_NO_REPLY",
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__
+                );
+
+                ResetLastError();
+            }
+
+        }
     }
 
     // Recalculate on chart changes, clicks, and certain object dragging.
@@ -908,7 +1027,20 @@ void OnChartEvent(const int id,
         }
 
         if (sparam == ObjectPrefix + "StopLossLine") StopLossLineIsBeingMoved = false; // In any case ending moving state for the stop-loss line.
-        if (StringFind(sparam, ObjectPrefix + "TakeProfitLine") != -1) ArrayInitialize(TakeProfitLineIsBeingMoved, false); // In any case ending moving state for the take-profit line.
+        
+        if (StringFind(sparam, ObjectPrefix + "TakeProfitLine") != -1) 
+        {
+            ArrayInitialize(TakeProfitLineIsBeingMoved, false); // In any case ending moving state for the take-profit line.  
+        }
+        else
+        {
+            
+            if(_LastError == ERR_STRING_SMALL_LEN)
+            {
+                ResetLastError();
+            }
+
+        }
 
         if (id != CHARTEVENT_CHART_CHANGE) ExtDialog.RefreshValues();
 
@@ -927,7 +1059,35 @@ void OnChartEvent(const int id,
         // Remember if the chart is on top or is minimized.
         prev_chart_on_top = ChartGetInteger(ChartID(), CHART_BRING_TO_TOP);
         ChartRedraw();
+            
+        if(_LastError == ERR_CHART_NO_REPLY)
+        {
+                
+            Print(
+                "\nError: ERR_CHART_NO_REPLY",
+                "\nFunction: ", __FUNCTION__,
+                "\nLine: ", __LINE__
+            );
+
+            ResetLastError();
+        }
+
     }
+    
+    if(_LastError != 0)
+      {
+
+        Print(
+            "\nError: ", _LastError,
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        ExpertRemove();
+
+      }
+      
 }
 
 //+------------------------------------------------------------------+
@@ -935,8 +1095,40 @@ void OnChartEvent(const int id,
 //+------------------------------------------------------------------+
 void OnTrade()
 {
+
+    ResetLastError();
+
     ExtDialog.RefreshValues();
     ChartRedraw();
+    
+    if(_LastError == ERR_CHART_NO_REPLY)
+    {
+
+        Print(
+            "\nError: ERR_CHART_NO_REPLY",
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        ResetLastError();
+
+    }
+    
+    if(_LastError != 0)
+      {
+
+        Print(
+            "\nError: ", _LastError,
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        ExpertRemove();
+
+      }
+      
 }
 
 //+------------------------------------------------------------------+
@@ -944,9 +1136,40 @@ void OnTrade()
 //+------------------------------------------------------------------+
 void OnTimer()
 {
+
+    ResetLastError();
+    
     ExtDialog.CheckAndRestoreLines(); // Check if any lines should be restored.
     if (GetTickCount() - LastRecalculationTime < 1000) return; // Do not recalculate on timer if less than 1 second passed.
     ExtDialog.RefreshValues();
     ChartRedraw();
+
+    if(_LastError == ERR_CHART_NO_REPLY)
+    {
+
+        Print(
+            "\nError: ERR_CHART_NO_REPLY",
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        ResetLastError();
+
+    }
+    
+    if(_LastError != 0)
+      {
+
+        Print(
+            "\nError: ", _LastError,
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        ExpertRemove();
+
+      }
+
 }
 //+------------------------------------------------------------------+

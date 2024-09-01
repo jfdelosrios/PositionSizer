@@ -4,6 +4,7 @@
 //|                                       https://www.earnforex.com/ |
 //+------------------------------------------------------------------+
 #include "Defines.mqh"
+#include <Trade\SymbolInfo.mqh>
 
 class CPositionSizeCalculator : public CAppDialog
 {
@@ -28,6 +29,16 @@ private:
     CButton          AdditionalTPButtonsIncrease[], AdditionalTPButtonsDecrease[];
     // Store ordered and named panel objects arranged by tabs.
     CPanelList       *MainTabList, *RiskTabList, *MarginTabList, *SwapsTabList, *TradingTabList;
+    
+    CSymbolInfo      m_symbol;
+    
+    bool             ReadLineObject(
+                        const string _nameObject,
+                        double &read_value
+                        );
+   
+    void             CalculateRiskAndPositionSize();
+    void             RecalculatePositionSize();
     
     // Some of the panel measurement parameters are used by more than one method:
     int              first_column_start, normal_label_width, normal_edit_width, second_column_start, element_height, third_column_start, narrow_label_width, v_spacing, multi_tp_column_start,
@@ -1521,6 +1532,97 @@ void CPositionSizeCalculator::MoveAndResize()
     }
     NoPanelMaximization = false;
 }
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool CPositionSizeCalculator::ReadLineObject(
+   const string _nameObject,
+   double &read_value
+   )
+{
+
+    if(ObjectFind(ChartID(), _nameObject) < 0)
+    {
+        /*
+        if(_LastError == ERR_OBJECT_NOT_FOUND)
+        {
+           
+            if(_printMessage)
+            {
+            
+                Print(
+                    "\n!ObjectFind",
+                    "\nError: ERR_OBJECT_NOT_FOUND",
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__,
+                    "\nNameObject: ", _nameObject
+
+                );
+                 
+            }
+           
+        }
+        else
+        {
+           
+            if(_printMessage)
+            {
+            
+                Print(
+                    "\n!ObjectFind",
+                    "\nError: ", _LastError,
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__,
+                    "\nNameObject: ", _nameObject
+                );
+              
+            }
+         
+        }
+        */
+
+        return false;
+        
+    }
+
+    if (!ObjectGetDouble(ChartID(), _nameObject, OBJPROP_PRICE, 0, read_value))
+    {
+          
+        Print(
+            "\n!ObjectGetDouble",
+            "\nError: ", _LastError,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__,
+            "\nNameObject: ", _nameObject
+        );
+     
+        return false;
+
+    }
+        
+    read_value = m_symbol.NormalizePrice(read_value);
+
+    if (!ObjectSetDouble(ChartID(), _nameObject, OBJPROP_PRICE, read_value))
+    {
+              
+        Print(
+            "\n!ObjectGetDouble",
+            "\nError: ", _LastError,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__,
+            "\nNameObject: ", _nameObject
+        );
+     
+        return false;
+        
+    }
+
+    return true;
+    
+}
+
 
 bool CPositionSizeCalculator::DisplayValues()
 {
@@ -4629,7 +4731,7 @@ void CPositionSizeCalculator::OnEndEditEdtExpiry()
 //|+----------------------+
 bool CPositionSizeCalculator::SaveSettingsOnDisk(string symbol = "")
 {
-    Print(TRANSLATION_MESSAGE_TRYING_TO_SAVE_FILE + ": " + m_FileName + ".");
+    Print("\n", TRANSLATION_MESSAGE_TRYING_TO_SAVE_FILE + ": " + m_FileName + ".");
 
     int fh;
     // Save to new format only.
@@ -4803,120 +4905,147 @@ bool CPositionSizeCalculator::SaveSettingsOnDisk(string symbol = "")
     // When the EA is reloaded due to its input parameters change, these should be compared to the new values.
     // If the value is changed, it should be updated in the panel too.
     // Is the EA reloading due to the input parameters change?
-    if (GlobalVariableGet("PS-" + IntegerToString(ChartID()) + "-Parameters") > 0)
-    {
-        FileWrite(fh, "Parameter_DefaultTradeDirection");
-        FileWrite(fh, IntegerToString(DefaultTradeDirection));
-        FileWrite(fh, "Parameter_DefaultSL");
-        FileWrite(fh, IntegerToString(DefaultSL));
-        FileWrite(fh, "Parameter_DefaultTP");
-        FileWrite(fh, IntegerToString(DefaultTP));
-        FileWrite(fh, "Parameter_DefaultShowLines");
-        FileWrite(fh, IntegerToString(DefaultShowLines));
-        FileWrite(fh, "Parameter_DefaultLinesSelected");
-        FileWrite(fh, IntegerToString(DefaultLinesSelected));
-        FileWrite(fh, "Parameter_DefaultATRPeriod");
-        FileWrite(fh, IntegerToString(DefaultATRPeriod));
-        FileWrite(fh, "Parameter_DefaultATRMultiplierSL");
-        FileWrite(fh, DoubleToString(DefaultATRMultiplierSL, 2));
-        FileWrite(fh, "Parameter_DefaultATRMultiplierTP");
-        FileWrite(fh, DoubleToString(DefaultATRMultiplierTP, 2));
-        FileWrite(fh, "Parameter_DefaultATRTimeframe");
-        FileWrite(fh, IntegerToString(DefaultATRTimeframe));
-        FileWrite(fh, "Parameter_DefaultEntryType");
-        FileWrite(fh, IntegerToString(DefaultEntryType));
-        FileWrite(fh, "Parameter_DefaultCommission");
-        FileWrite(fh, DoubleToString(DefaultCommission, CommissionDecimals));
-        FileWrite(fh, "Parameter_DefaultCommissionType");
-        FileWrite(fh, IntegerToString(DefaultCommissionType));
-        FileWrite(fh, "Parameter_DefaultAccountButton");
-        FileWrite(fh, IntegerToString(DefaultAccountButton));
-        FileWrite(fh, "Parameter_CustomBalance");
-        FileWrite(fh, DoubleToString(CustomBalance));
-        FileWrite(fh, "Parameter_DefaultRisk");
-        FileWrite(fh, DoubleToString(DefaultRisk, 2));
-        FileWrite(fh, "Parameter_DefaultMoneyRisk");
-        FileWrite(fh, DoubleToString(DefaultMoneyRisk, AccountCurrencyDigits));
-        FileWrite(fh, "Parameter_DefaultPositionSize");
-        FileWrite(fh, DoubleToString(DefaultPositionSize, LotStep_digits));
-        FileWrite(fh, "Parameter_DefaultCountPendingOrders");
-        FileWrite(fh, IntegerToString(DefaultCountPendingOrders));
-        FileWrite(fh, "Parameter_DefaultIgnoreOrdersWithoutSL");
-        FileWrite(fh, IntegerToString(DefaultIgnoreOrdersWithoutSL));
-        FileWrite(fh, "Parameter_DefaultIgnoreOrdersWithoutTP");
-        FileWrite(fh, IntegerToString(DefaultIgnoreOrdersWithoutTP));
-        FileWrite(fh, "Parameter_DefaultIgnoreOtherSymbols");
-        FileWrite(fh, IntegerToString(DefaultIgnoreOtherSymbols));
-        FileWrite(fh, "Parameter_DefaultCustomLeverage");
-        FileWrite(fh, DoubleToString(DefaultCustomLeverage));
-        FileWrite(fh, "Parameter_DefaultMagicNumber");
-        FileWrite(fh, IntegerToString(DefaultMagicNumber));
-        FileWrite(fh, "Parameter_DefaultCommentary");
-        FileWrite(fh, DefaultCommentary);
-        FileWrite(fh, "Parameter_DefaultCommentAutoSuffix");
-        FileWrite(fh, IntegerToString(DefaultCommentAutoSuffix));
-        FileWrite(fh, "Parameter_DefaultDisableTradingWhenLinesAreHidden");
-        FileWrite(fh, IntegerToString(DefaultDisableTradingWhenLinesAreHidden));
-        FileWrite(fh, "Parameter_DefaultMaxSlippage");
-        FileWrite(fh, IntegerToString(DefaultMaxSlippage));
-        FileWrite(fh, "Parameter_DefaultMaxSpread");
-        FileWrite(fh, IntegerToString(DefaultMaxSpread));
-        FileWrite(fh, "Parameter_DefaultMaxEntrySLDistance");
-        FileWrite(fh, IntegerToString(DefaultMaxEntrySLDistance));
-        FileWrite(fh, "Parameter_DefaultMinEntrySLDistance");
-        FileWrite(fh, IntegerToString(DefaultMinEntrySLDistance));
-        FileWrite(fh, "Parameter_DefaultMaxPositionSizeTotal");
-        FileWrite(fh, DoubleToString(DefaultMaxPositionSizeTotal, LotStep_digits));
-        FileWrite(fh, "Parameter_DefaultMaxPositionSizePerSymbol");
-        FileWrite(fh, DoubleToString(DefaultMaxPositionSizePerSymbol, LotStep_digits));
-        FileWrite(fh, "Parameter_DefaultSubtractOPV");
-        FileWrite(fh, IntegerToString(DefaultSubtractOPV));
-        FileWrite(fh, "Parameter_DefaultSubtractPOV");
-        FileWrite(fh, IntegerToString(DefaultSubtractPOV));
-        FileWrite(fh, "Parameter_DefaultDoNotApplyStopLoss");
-        FileWrite(fh, IntegerToString(DefaultDoNotApplyStopLoss));
-        FileWrite(fh, "Parameter_DefaultDoNotApplyTakeProfit");
-        FileWrite(fh, IntegerToString(DefaultDoNotApplyTakeProfit));
-        FileWrite(fh, "Parameter_DefaultAskForConfirmation");
-        FileWrite(fh, IntegerToString(DefaultAskForConfirmation));
-        FileWrite(fh, "Parameter_DefaultPanelPositionCorner");
-        FileWrite(fh, IntegerToString(DefaultPanelPositionCorner));
-        FileWrite(fh, "Parameter_DefaultPanelPositionX");
-        FileWrite(fh, IntegerToString(DefaultPanelPositionX));
-        FileWrite(fh, "Parameter_DefaultPanelPositionY");
-        FileWrite(fh, IntegerToString(DefaultPanelPositionY));
-        FileWrite(fh, "Parameter_DefaultTPLockedOnSL");
-        FileWrite(fh, IntegerToString(DefaultTPLockedOnSL));
-        FileWrite(fh, "Parameter_DefaultTrailingStop");
-        FileWrite(fh, IntegerToString(DefaultTrailingStop));
-        FileWrite(fh, "Parameter_DefaultBreakEven");
-        FileWrite(fh, IntegerToString(DefaultBreakEven));
-        FileWrite(fh, "Parameter_DefaultExpiryMinutes");
-        FileWrite(fh, IntegerToString(DefaultExpiryMinutes));
-        FileWrite(fh, "Parameter_DefaultSpreadAdjustmentSL");
-        FileWrite(fh, IntegerToString(DefaultSpreadAdjustmentSL));
-        FileWrite(fh, "Parameter_DefaultSpreadAdjustmentTP");
-        FileWrite(fh, IntegerToString(DefaultSpreadAdjustmentTP));
-        FileWrite(fh, "Parameter_DefaultMaxNumberOfTradesTotal");
-        FileWrite(fh, IntegerToString(DefaultMaxNumberOfTradesTotal));
-        FileWrite(fh, "Parameter_DefaultMaxNumberOfTradesPerSymbol");
-        FileWrite(fh, IntegerToString(DefaultMaxNumberOfTradesPerSymbol));
-        FileWrite(fh, "Parameter_DefaultMaxRiskTotal");
-        FileWrite(fh, DoubleToString(DefaultMaxRiskTotal));
-        FileWrite(fh, "Parameter_DefaultMaxRiskPerSymbol");
-        FileWrite(fh, DoubleToString(DefaultMaxRiskPerSymbol));
-        // Not a part of sets, but needed for proper deletion of unnecessary additional TP lines.
-        FileWrite(fh, "Parameter_DefaultTakeProfitsNumber");
-        FileWrite(fh, IntegerToString(DefaultTakeProfitsNumber));
-        FileWrite(fh, "Parameter_DefaultSLDistanceInPoints");
-        FileWrite(fh, IntegerToString(DefaultSLDistanceInPoints));
-        FileWrite(fh, "Parameter_DefaultTPDistanceInPoints");
-        FileWrite(fh, IntegerToString(DefaultTPDistanceInPoints));
-    }
-
+    double varGlobal_1 = 0;
+    if(GlobalVariableGet( 
+         "PS-" + IntegerToString(ChartID()) + "-Parameters",
+         varGlobal_1
+      ))
+      {
+             
+          if (varGlobal_1 > 0)
+          {  
+              FileWrite(fh, "Parameter_DefaultTradeDirection");
+              FileWrite(fh, IntegerToString(DefaultTradeDirection));
+              FileWrite(fh, "Parameter_DefaultSL");
+              FileWrite(fh, IntegerToString(DefaultSL));
+              FileWrite(fh, "Parameter_DefaultTP");
+              FileWrite(fh, IntegerToString(DefaultTP));
+              FileWrite(fh, "Parameter_DefaultShowLines");
+              FileWrite(fh, IntegerToString(DefaultShowLines));
+              FileWrite(fh, "Parameter_DefaultLinesSelected");
+              FileWrite(fh, IntegerToString(DefaultLinesSelected));
+              FileWrite(fh, "Parameter_DefaultATRPeriod");
+              FileWrite(fh, IntegerToString(DefaultATRPeriod));
+              FileWrite(fh, "Parameter_DefaultATRMultiplierSL");
+              FileWrite(fh, DoubleToString(DefaultATRMultiplierSL, 2));
+              FileWrite(fh, "Parameter_DefaultATRMultiplierTP");
+              FileWrite(fh, DoubleToString(DefaultATRMultiplierTP, 2));
+              FileWrite(fh, "Parameter_DefaultATRTimeframe");
+              FileWrite(fh, IntegerToString(DefaultATRTimeframe));
+              FileWrite(fh, "Parameter_DefaultEntryType");
+              FileWrite(fh, IntegerToString(DefaultEntryType));
+              FileWrite(fh, "Parameter_DefaultCommission");
+              FileWrite(fh, DoubleToString(DefaultCommission, CommissionDecimals));
+              FileWrite(fh, "Parameter_DefaultCommissionType");
+              FileWrite(fh, IntegerToString(DefaultCommissionType));
+              FileWrite(fh, "Parameter_DefaultAccountButton");
+              FileWrite(fh, IntegerToString(DefaultAccountButton));
+              FileWrite(fh, "Parameter_CustomBalance");
+              FileWrite(fh, DoubleToString(CustomBalance));
+              FileWrite(fh, "Parameter_DefaultRisk");
+              FileWrite(fh, DoubleToString(DefaultRisk, 2));
+              FileWrite(fh, "Parameter_DefaultMoneyRisk");
+              FileWrite(fh, DoubleToString(DefaultMoneyRisk, AccountCurrencyDigits));
+              FileWrite(fh, "Parameter_DefaultPositionSize");
+              FileWrite(fh, DoubleToString(DefaultPositionSize, LotStep_digits));
+              FileWrite(fh, "Parameter_DefaultCountPendingOrders");
+              FileWrite(fh, IntegerToString(DefaultCountPendingOrders));
+              FileWrite(fh, "Parameter_DefaultIgnoreOrdersWithoutSL");
+              FileWrite(fh, IntegerToString(DefaultIgnoreOrdersWithoutSL));
+              FileWrite(fh, "Parameter_DefaultIgnoreOrdersWithoutTP");
+              FileWrite(fh, IntegerToString(DefaultIgnoreOrdersWithoutTP));
+              FileWrite(fh, "Parameter_DefaultIgnoreOtherSymbols");
+              FileWrite(fh, IntegerToString(DefaultIgnoreOtherSymbols));
+              FileWrite(fh, "Parameter_DefaultCustomLeverage");
+              FileWrite(fh, DoubleToString(DefaultCustomLeverage));
+              FileWrite(fh, "Parameter_DefaultMagicNumber");
+              FileWrite(fh, IntegerToString(DefaultMagicNumber));
+              FileWrite(fh, "Parameter_DefaultCommentary");
+              FileWrite(fh, DefaultCommentary);
+              FileWrite(fh, "Parameter_DefaultCommentAutoSuffix");
+              FileWrite(fh, IntegerToString(DefaultCommentAutoSuffix));
+              FileWrite(fh, "Parameter_DefaultDisableTradingWhenLinesAreHidden");
+              FileWrite(fh, IntegerToString(DefaultDisableTradingWhenLinesAreHidden));
+              FileWrite(fh, "Parameter_DefaultMaxSlippage");
+              FileWrite(fh, IntegerToString(DefaultMaxSlippage));
+              FileWrite(fh, "Parameter_DefaultMaxSpread");
+              FileWrite(fh, IntegerToString(DefaultMaxSpread));
+              FileWrite(fh, "Parameter_DefaultMaxEntrySLDistance");
+              FileWrite(fh, IntegerToString(DefaultMaxEntrySLDistance));
+              FileWrite(fh, "Parameter_DefaultMinEntrySLDistance");
+              FileWrite(fh, IntegerToString(DefaultMinEntrySLDistance));
+              FileWrite(fh, "Parameter_DefaultMaxPositionSizeTotal");
+              FileWrite(fh, DoubleToString(DefaultMaxPositionSizeTotal, LotStep_digits));
+              FileWrite(fh, "Parameter_DefaultMaxPositionSizePerSymbol");
+              FileWrite(fh, DoubleToString(DefaultMaxPositionSizePerSymbol, LotStep_digits));
+              FileWrite(fh, "Parameter_DefaultSubtractOPV");
+              FileWrite(fh, IntegerToString(DefaultSubtractOPV));
+              FileWrite(fh, "Parameter_DefaultSubtractPOV");
+              FileWrite(fh, IntegerToString(DefaultSubtractPOV));
+              FileWrite(fh, "Parameter_DefaultDoNotApplyStopLoss");
+              FileWrite(fh, IntegerToString(DefaultDoNotApplyStopLoss));
+              FileWrite(fh, "Parameter_DefaultDoNotApplyTakeProfit");
+              FileWrite(fh, IntegerToString(DefaultDoNotApplyTakeProfit));
+              FileWrite(fh, "Parameter_DefaultAskForConfirmation");
+              FileWrite(fh, IntegerToString(DefaultAskForConfirmation));
+              FileWrite(fh, "Parameter_DefaultPanelPositionCorner");
+              FileWrite(fh, IntegerToString(DefaultPanelPositionCorner));
+              FileWrite(fh, "Parameter_DefaultPanelPositionX");
+              FileWrite(fh, IntegerToString(DefaultPanelPositionX));
+              FileWrite(fh, "Parameter_DefaultPanelPositionY");
+              FileWrite(fh, IntegerToString(DefaultPanelPositionY));
+              FileWrite(fh, "Parameter_DefaultTPLockedOnSL");
+              FileWrite(fh, IntegerToString(DefaultTPLockedOnSL));
+              FileWrite(fh, "Parameter_DefaultTrailingStop");
+              FileWrite(fh, IntegerToString(DefaultTrailingStop));
+              FileWrite(fh, "Parameter_DefaultBreakEven");
+              FileWrite(fh, IntegerToString(DefaultBreakEven));
+              FileWrite(fh, "Parameter_DefaultExpiryMinutes");
+              FileWrite(fh, IntegerToString(DefaultExpiryMinutes));
+              FileWrite(fh, "Parameter_DefaultSpreadAdjustmentSL");
+              FileWrite(fh, IntegerToString(DefaultSpreadAdjustmentSL));
+              FileWrite(fh, "Parameter_DefaultSpreadAdjustmentTP");
+              FileWrite(fh, IntegerToString(DefaultSpreadAdjustmentTP));
+              FileWrite(fh, "Parameter_DefaultMaxNumberOfTradesTotal");
+              FileWrite(fh, IntegerToString(DefaultMaxNumberOfTradesTotal));
+              FileWrite(fh, "Parameter_DefaultMaxNumberOfTradesPerSymbol");
+              FileWrite(fh, IntegerToString(DefaultMaxNumberOfTradesPerSymbol));
+              FileWrite(fh, "Parameter_DefaultMaxRiskTotal");
+              FileWrite(fh, DoubleToString(DefaultMaxRiskTotal));
+              FileWrite(fh, "Parameter_DefaultMaxRiskPerSymbol");
+              FileWrite(fh, DoubleToString(DefaultMaxRiskPerSymbol));
+              // Not a part of sets, but needed for proper deletion of unnecessary additional TP lines.
+              FileWrite(fh, "Parameter_DefaultTakeProfitsNumber");
+              FileWrite(fh, IntegerToString(DefaultTakeProfitsNumber));
+              FileWrite(fh, "Parameter_DefaultSLDistanceInPoints");
+              FileWrite(fh, IntegerToString(DefaultSLDistanceInPoints));
+              FileWrite(fh, "Parameter_DefaultTPDistanceInPoints");
+              FileWrite(fh, IntegerToString(DefaultTPDistanceInPoints));
+          }
+            
+      }
+      else
+        {
+         
+       if(_LastError == ERR_GLOBALVARIABLE_NOT_FOUND)
+         {
+   
+           Print(
+               "\nError: ERR_GLOBALVARIABLE_NOT_FOUND",
+               "\nFile: ", __FILE__,
+               "\nFunction: ", __FUNCTION__,
+               "\nLine: ", __LINE__
+           );
+           
+           ResetLastError();
+   
+         }
+         
+        }
+    
     FileClose(fh);
 
-    Print(TRANSLATION_MESSAGE_SAVED_SETTINGS);
+    Print("\n",TRANSLATION_MESSAGE_SAVED_SETTINGS);
     return true;
 }
 
@@ -4937,8 +5066,38 @@ bool CPositionSizeCalculator::LoadSettingsFromDisk()
     }
     else // No new format file, try to load old format.
     {
+    
+       if(_LastError == ERR_FILE_NOT_EXIST)
+         {
+           /*
+           Print(
+               "\nError: ERR_FILE_NOT_EXIST",
+               "\nFile: ", __FILE__,
+               "\nFunction: ", __FUNCTION__,
+               "\nLine: ", __LINE__
+           );
+           */
+           ResetLastError();
+   
+         }
+
         if (!FileIsExist("PS_" + m_FileName))
         {
+            
+            if(_LastError == ERR_FILE_NOT_EXIST)
+                {
+                /*
+                Print(
+                    "\nError: ERR_FILE_NOT_EXIST",
+                    "\nFile: ", __FILE__,
+                    "\nFunction: ", __FUNCTION__,
+                    "\nLine: ", __LINE__
+                );
+                */
+                ResetLastError();
+        
+                }
+
             Print(TRANSLATION_MESSAGE_NO_SETTINGS_FILE_TO_LOAD);
             return false;
         }
@@ -5418,10 +5577,40 @@ bool CPositionSizeCalculator::DeleteSettingsFile()
     string fn_with_path = "PS_" + m_FileName;
     if (!FileIsExist(fn_with_path)) // Try old location.
     {
+    
+       if(_LastError == ERR_FILE_NOT_EXIST)
+         {
+           /*
+           Print(
+               "\nError: ERR_FILE_NOT_EXIST",
+               "\nFile: ", __FILE__,
+               "\nFunction: ", __FUNCTION__,
+               "\nLine: ", __LINE__
+           );
+           */
+           ResetLastError();
+   
+         }
+
         fn_with_path = "PS_Settings\\" + m_FileName; // Change to new location.
     }
     if (!FileIsExist(fn_with_path))
     {
+    
+       if(_LastError == ERR_FILE_NOT_EXIST)
+         {
+           /*
+           Print(
+               "\nError: ERR_FILE_NOT_EXIST",
+               "\nFile: ", __FILE__,
+               "\nFunction: ", __FUNCTION__,
+               "\nLine: ", __LINE__
+           );
+           */
+           ResetLastError();
+   
+         }
+         
         Print(TRANSLATION_MESSAGE_NO_SETTINGS_FILE_TO_DELETE);
         return false;
     }
@@ -5442,6 +5631,21 @@ void CPositionSizeCalculator::HideShowMaximize()
     remember_top = Top();
 
     Hide();
+    
+    if(_LastError == ERR_OBJECT_NOT_FOUND)
+      {
+
+        Print(
+            "\nError: ERR_OBJECT_NOT_FOUND",
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        return;
+
+      }
+    
     Show();
     NoPanelMaximization = true;
     Maximize();
@@ -6040,11 +6244,11 @@ void Initialization()
 
     // Using TP distance in points but just switched from the TP given as a level on an already attached indicator.
     if ((sets.TPDistanceInPoints) && (sets.TakeProfit == 0) && (sets.TakeProfitLevel != 0)) sets.TakeProfit = (int)MathRound(MathAbs((sets.TakeProfitLevel - sets.EntryLevel) / _Point));
-    if (sets.EntryLevel - sets.StopLossLevel == 0)
-    {
-        Print(TRANSLATION_MESSAGE_ENTRY_SL_DIFFERENT_NON_ZERO);
-//        return;
-    }
+    //if (sets.EntryLevel - sets.StopLossLevel == 0)
+    //{
+        //Print(TRANSLATION_MESSAGE_ENTRY_SL_DIFFERENT_NON_ZERO);
+        //return;
+    //}
 
     if (sets.EntryType == Instant)
     {
@@ -6455,11 +6659,9 @@ void Initialization()
 //| Main recalculation function used on every tick and on entry/SL   |
 //| line drag.                                                       |
 //+------------------------------------------------------------------+
-void RecalculatePositionSize()
+void CPositionSizeCalculator::RecalculatePositionSize()
 {
     for (int i = 1; i < sets.TakeProfitsNumber; i++) AdditionalWarningTP[i - 1] = "";
-
-    double Ask, Bid;
 
     // If could not find account currency, probably not connected. Also check for symbol availability.
     if ((AccountInfoString(ACCOUNT_CURRENCY) == "") || (!TerminalInfoInteger(TERMINAL_CONNECTED) || (!SymbolInfoInteger(Symbol(), SYMBOL_SELECT)))) return;
@@ -6467,8 +6669,9 @@ void RecalculatePositionSize()
     {
         GetSymbolAndAccountData();
     }
-    Bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-    Ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+
+    const double Bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+    const double Ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
 
     double read_tEntryLevel, read_tStopLossLevel, read_tTakeProfitLevel, read_tStopPriceLevel;
     if (!ObjectGetDouble(ChartID(), ObjectPrefix + "EntryLine", OBJPROP_PRICE, 0, read_tEntryLevel)) return; // Line was deleted, waiting for automatic restoration.
@@ -6681,7 +6884,7 @@ void RecalculatePositionSize()
 
     if (StopLoss == 0)
     {
-        Print(TRANSLATION_MESSAGE_ENTRY_SL_DIFFERENT);
+        //Print(TRANSLATION_MESSAGE_ENTRY_SL_DIFFERENT);
         return;
     }
 
@@ -6732,7 +6935,7 @@ void GetSymbolAndAccountData()
 //+------------------------------------------------------------------+
 //| Calculates risk size and position size. Sets object values.      |
 //+------------------------------------------------------------------+
-void CalculateRiskAndPositionSize()
+void CPositionSizeCalculator::CalculateRiskAndPositionSize()
 {
     DisplayRisk = sets.Risk;
     double PositionSize = 0;
@@ -6865,10 +7068,11 @@ void CalculateRiskAndPositionSize()
     else MainOutputReward = 0;
 
     // Multiple TPs.
+    double add_tTakeProfitLevel;
     for (int i = 1; i < sets.TakeProfitsNumber; i++)
     {
         AdditionalOutputReward[i - 1] = 0;
-        double add_tTakeProfitLevel = Round(ObjectGetDouble(ChartID(), ObjectPrefix + "TakeProfitLine" + IntegerToString(i), OBJPROP_PRICE), _Digits);
+        add_tTakeProfitLevel = Round(ObjectGetDouble(ChartID(), ObjectPrefix + "TakeProfitLine" + IntegerToString(i), OBJPROP_PRICE), _Digits);
         if (add_tTakeProfitLevel > 0)
         {
             // If account currency == pair's base currency, adjust UnitCost to future rate (TP). Works only for Forex pairs.
@@ -7995,7 +8199,23 @@ double Round(const double value, const double digits, bool round_down = false)
 string FormatDouble(const string number, const int digits = 2)
 {
     // Find "." position.
+        
     int pos = StringFind(number, ".");
+
+    if(_LastError == ERR_NOTINITIALIZED_STRING)
+    {
+    
+        Print(
+            "\nError: ERR_NOTINITIALIZED_STRING",
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+        
+        ResetLastError();
+        
+    } 
+
     string integer = number;
     string decimal = "";
     if (pos > -1)
@@ -8170,6 +8390,21 @@ void DissectHotKeyCombination(const string hotkey, bool &shift_required, bool &c
     if (StringFind(hotkey, "+") > -1) separator = StringGetCharacter("+", 0);
     else if (StringFind(hotkey, "-") > -1) separator = StringGetCharacter("-", 0);
     else separator = 0;
+
+    if(_LastError == ERR_NOTINITIALIZED_STRING)
+    {
+    
+        Print(
+            "\nError: ERR_NOTINITIALIZED_STRING",
+            "\nFile: ", __FILE__,
+            "\nFunction: ", __FUNCTION__,
+            "\nLine: ", __LINE__
+        );
+
+        ResetLastError();
+        
+    } 
+
     string keys[];
     int n = StringSplit(hotkey, separator, keys);
     if (n < 1) return; // Wrong or empty.
